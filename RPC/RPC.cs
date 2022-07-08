@@ -17,6 +17,7 @@ public class RecentUserChatDto
     public string UserName { get; set; }
     public string CreatedTime { get; set; }
 }
+
 public class RPC
 {
 
@@ -33,8 +34,6 @@ public class RPC
         string json = JsonConvert.SerializeObject(userChatData);
 
         var res = await Manager.Nakama.Client.RpcAsync(Manager.Nakama.Session, "chat_entered", json);
-
-
 
         return res.Payload;
             
@@ -54,10 +53,7 @@ public class RPC
 
     public async Task<string> MatchCreate()
     {
-        
-
         var res = await Manager.Nakama.Client.RpcAsync(Manager.Nakama.Session, "Match_Create");
-
         Debug.Log("Create Match Succeed");
         return res.Payload;
     }

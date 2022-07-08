@@ -34,7 +34,6 @@ public class PlayerController : MonoBehaviour
             {
                 case PlayerState.Idle:
                     anim.CrossFade("WAIT", 0.01f);
-
                     break;
                 case PlayerState.Moving:
                     anim.CrossFade("RUN", 0.005f);
@@ -46,10 +45,14 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    
-    void Start()
+    void Init()
     {
         Camera.main.GetComponent<CameraController>().SetPlayer(gameObject);
+    }
+
+    void Start()
+    {
+        Init();
     }
 
     async void Update()

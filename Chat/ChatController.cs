@@ -14,18 +14,13 @@ public class ChatController : MonoBehaviour
 
     public Button sendBtn; 
     // Start is called before the first frame update
-
-    
-
     public async void OnEndEdit()
     {
-        
         if (_input.text.Equals(""))
         {
             Debug.Log("Empty"); 
             return;
         }
-        
         SendUserChatDto userChatData = new SendUserChatDto();
         string msg = _input.text;
         userChatData.Message = msg;
@@ -41,6 +36,11 @@ public class ChatController : MonoBehaviour
     }
     void Start()
     {
+        Init();
+    }
+
+    void Init()
+    {
         Manager.Nakama.ChatAction += LoadRecentChat;
     }
 
@@ -48,7 +48,6 @@ public class ChatController : MonoBehaviour
     {
         var recentChat = await Manager.Nakama.RPC.LoadRecentChat();
         RecentUserChatDto[] recentUserChatList = JsonConvert.DeserializeObject<RecentUserChatDto[]>(recentChat);
-
         string text = "";
         foreach (var chat in recentUserChatList)
         {
@@ -56,11 +55,9 @@ public class ChatController : MonoBehaviour
         }
         chattingList.text = text;
     }
-
     // Update is called once per frame
     void Update()
     {
         
-
     }
 }

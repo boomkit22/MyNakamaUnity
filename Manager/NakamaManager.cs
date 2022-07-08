@@ -15,9 +15,7 @@ public class NakamaManager
     protected Nakama.ISocket _socket;
     protected RPC _rpc = new RPC();
     protected string _matchId;
-
     protected string _playerEmail;
-
     protected GameObject _player;
     protected GameObject _playerPrefab;
     protected GameObject _remotePlayerPrefab;
@@ -25,11 +23,9 @@ public class NakamaManager
 
     protected string _playerSessionId;
     public UnityMainThreadDispatcher _mainThread;
-
-    public Action<String, Vector3> SpawnAction = null;
     public string PlayerSessionId { get { return _playerSessionId; } set { _playerSessionId = value; } }
-
     public Action ChatAction = null;
+    public Action<String, Vector3> SpawnAction = null;
 
     public string PlayerEmail { get { return _playerEmail; } set { _playerEmail = value; } }
     public Nakama.IClient Client { get { return _client; } }
@@ -39,7 +35,6 @@ public class NakamaManager
     public RPC RPC { get { return _rpc; } }
 
     public Dictionary<string, GameObject> _players = new Dictionary<string, GameObject>();
-
     public GameObject Player { get { return _player; } set { _player = value; } }
     public GameObject PlayerPrefab { get { return _playerPrefab; } set { _playerPrefab = value; } }
     public GameObject RemotePlayerPrefab { get { return _remotePlayerPrefab; } set { _remotePlayerPrefab = value; } }
@@ -60,15 +55,11 @@ public class NakamaManager
         RemotePlayerPrefab = Resources.Load<GameObject>("Prefabs/remoteUnityChan");
         SpawnAction += SpawnOther;
 
-
         if (_mainThread == null)
         {
             _mainThread = UnityMainThreadDispatcher.Instance();
         }
-
-
         //CreateMatch();
-
     }
 
     //public async void CreateMatch()
@@ -82,33 +73,24 @@ public class NakamaManager
 
     public async void ConnectSocket()
     {
-
         //_socket.ReceivedMatchState += OnMatchStateReceived;
         //_socket.ReceivedMatchPresence += OnMatchPresence;
         _socket = _client.NewSocket();
         _socket.ReceivedMatchState += ms => _mainThread.Enqueue(() => OnMatchStateReceived(ms));
         _socket.ReceivedMatchPresence += mp => _mainThread.Enqueue(() => OnMatchPresence(mp));
-
         await _socket.ConnectAsync(Session, true);
-
-
-
-  
     }
 
     async private void OnMatchStateReceived(IMatchState matchState)
     {
-
+        var stateJson = Encoding.UTF8.GetString(matchState.State);
 
         switch (matchState.OpCode)
         {
-
             case OpCodes.Idle:
                 {
-                    var stateJson = Encoding.UTF8.GetString(matchState.State);
                     var positionState = JsonParser.FromJson<PositionState>(stateJson);
                     string SenderSessionId = positionState.SenderSessionId;
-
                     if (SenderSessionId == _playerSessionId)
                     {
                         return;
@@ -118,7 +100,6 @@ public class NakamaManager
                 break;
             case OpCodes.Position:
                 {
-                    var stateJson = Encoding.UTF8.GetString(matchState.State);
                     var positionState = JsonParser.FromJson<PositionState>(stateJson);
                     string SenderSessionId = positionState.SenderSessionId;
 
@@ -128,7 +109,6 @@ public class NakamaManager
 
                     }
                     Debug.LogWarning("Receive Other Player Moving");
-
                     if(_players.ContainsKey(SenderSessionId))
                     {
                         Debug.LogWarning($"x : {positionState._X} y : {positionState._Y} z : {positionState._Z} rotate y :{positionState._Rotate_Y}");
@@ -137,7 +117,6 @@ public class NakamaManager
                         _players[SenderSessionId].transform.position = Vector3.Lerp(_players[SenderSessionId].transform.position, new Vector3(positionState._X, positionState._Y, positionState._Z), Time.deltaTime * 10);
                         _players[SenderSessionId].transform.rotation = Quaternion.Euler(0, positionState._Rotate_Y, 0);
                     }
-
                     //Debug.Log(positionState._X);
 
                     //if(matchState.UserPresence == null)
@@ -165,7 +144,6 @@ public class NakamaManager
 
             case OpCodes.Moving:
                 {
-                    var stateJson = Encoding.UTF8.GetString(matchState.State);
                     var positionState = JsonParser.FromJson<PositionState>(stateJson);
                     string SenderSessionId = positionState.SenderSessionId;
 
@@ -174,13 +152,11 @@ public class NakamaManager
                         return;
                     }
                     _players[SenderSessionId].GetComponent<RemotePlayerController>().State = RemotePlayerState.Moving;
-
                 }
                 break;
 
             case OpCodes.Jumping:
                 {
-                    var stateJson = Encoding.UTF8.GetString(matchState.State);
                     var positionState = JsonParser.FromJson<PositionState>(stateJson);
                     string SenderSessionId = positionState.SenderSessionId;
 
@@ -194,13 +170,8 @@ public class NakamaManager
 
             case OpCodes.Join:
                 {
-
-                    var stateJson = Encoding.UTF8.GetString(matchState.State);
-                    Debug.Log(stateJson);
                     JoinState joinstate = JsonParser.FromJson<JoinState>(stateJson);
-
                     string SenderSessionId = joinstate.SenderSessionId;
-
                     if (SenderSessionId == _playerSessionId)
                     {
                         return;
@@ -212,10 +183,8 @@ public class NakamaManager
                     {
                         Vector3 position = new Vector3(joinstate._X, joinstate._Y, joinstate._Z);
                         SpawnAction.Invoke(SenderSessionId, position);
-
                         JoinState state = new JoinState(_playerSessionId, Player.transform.position);
                         await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, JsonWriter.ToJson(state));
-
                         //_players.Add(SenderSessionId, _remotePlayerPrefab);
                         //GameObject go = UnityEngine.Object.Instantiate(RemotePlayer);
                         //go.transform.position = new Vector3(joinstate._X, joinstate._Y, joinstate._Z);
@@ -243,7 +212,6 @@ public class NakamaManager
 
             case OpCodes.Chat:
                 {
-
                     if (ChatAction != null)
                         ChatAction.Invoke();
                 }
@@ -251,11 +219,14 @@ public class NakamaManager
         }
      }
 
+    // UnityMainThreadDispathcer 사용하기 전에 이렇게 해보았는데
+    // 이래도 안됬음 
+    // 문제 : mainThread가 아닌 다른 Thread에서는 Instantiate를 할 수없음
+    // 해결범 : UnityMainThreadDispathcer를 사용하여 mainThread로 Instantatite
     private void SpawnOther(string senderSessionId, Vector3 initPosition)
     {
         GameObject go = UnityEngine.Object.Instantiate(RemotePlayerPrefab);
         _players.Add(senderSessionId, go);
-        
         go.transform.position = initPosition;
     }
 
@@ -275,14 +246,9 @@ public class NakamaManager
 
     public async Task JoinMatch(string matchId)
     {
-
         //ConnectSocket();
-
-
         Match = await _socket.JoinMatchAsync(matchId);
-
         _playerSessionId = Match.Self.SessionId;
-
         JoinState state = new JoinState(_playerSessionId, 0, 0, 0);
         await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, JsonWriter.ToJson(state));
         //_matchId = Match.Id;
@@ -306,9 +272,6 @@ public class NakamaManager
         //{
         //    UnityEngine.Object.Instantiate(player.Value);
         //}
-
-
-
     }
 }
 
@@ -361,7 +324,6 @@ public class JoinState
         _Y = Y;
         _Z = Z;
     }
-
     public JoinState(string senderSessionId, Vector3 position)
     {
         _senderSessionId = senderSessionId;

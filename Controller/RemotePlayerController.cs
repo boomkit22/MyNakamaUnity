@@ -14,13 +14,11 @@ public class RemotePlayerController : MonoBehaviour
     {
         
     }
-
     // Update is called once per frame
     void Update()
     {
         
     }
-
 
     public RemotePlayerState State
     {
@@ -51,6 +49,7 @@ public class RemotePlayerController : MonoBehaviour
     {
         _playingJumping = false;
     }
+
 }
 
 public enum RemotePlayerState

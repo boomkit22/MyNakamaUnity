@@ -27,7 +27,7 @@ public class Manager : MonoBehaviour
             GameObject go = GameObject.Find("@Manager");
             if ( go == null)
             {
-                go = new GameObject { name = "@Managers" };
+                go = new GameObject { name = "@Manager" };
                 go.AddComponent<Manager>();
             }
             DontDestroyOnLoad(go);

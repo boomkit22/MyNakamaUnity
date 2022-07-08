@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 public class Login : MonoBehaviour
 {
-  
+
 
     TMP_InputField _IF_Id;
     TMP_InputField _IF_Password;
@@ -27,7 +27,7 @@ public class Login : MonoBehaviour
 
     void Update()
     {
-        
+
     }
 
     async public void OnLoginButtonClick()
@@ -35,8 +35,6 @@ public class Login : MonoBehaviour
         string email = _IF_Id.text;
         string password = _IF_Password.text;
         Manager.Nakama.PlayerEmail = email;
-
-
         try
         {
             Manager.Nakama.Session = await Manager.Nakama.Client.AuthenticateEmailAsync(email, password, create: false);
@@ -46,16 +44,12 @@ public class Login : MonoBehaviour
         {
             Debug.Log("Exception Message: " + ex.Message);
         }
-
         if (Manager.Nakama.Session != null)
         {
-
+            SceneManager.LoadScene("Game");
             await Manager.Nakama.RPC.InitializeChat();
             //var recentChat = await Manager.Nakama.RPC.LoadRecentChat();
-
             Debug.LogWarning("Login Succeed");
-
-            SceneManager.LoadScene("Game");
 
             if (_Match_Id.text == "")
             {
@@ -69,20 +63,10 @@ public class Login : MonoBehaviour
             }
 
             await Manager.Nakama.JoinMatch(Manager.Nakama.MatchId);
-
             if (Manager.Nakama.PlayerPrefab == null)
                 Debug.LogWarning("Load unitychan failed");
             Manager.Nakama.Player = Instantiate(Manager.Nakama.PlayerPrefab);
-
-
-        
             //Debug.Log(matchId);
-
-
-
-        
-
-
         }
         else
         {
@@ -93,7 +77,7 @@ public class Login : MonoBehaviour
     public void OnRegisterButtonClick()
     {
         GameObject original = Resources.Load<GameObject>($"Prefabs/UI/Panel_Register");
-        if(original == null)
+        if (original == null)
         {
             Debug.Log("Panel_Register Load Failed");
             return;
