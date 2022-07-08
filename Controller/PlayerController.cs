@@ -34,6 +34,7 @@ public class PlayerController : MonoBehaviour
             {
                 case PlayerState.Idle:
                     anim.CrossFade("WAIT", 0.01f);
+
                     break;
                 case PlayerState.Moving:
                     anim.CrossFade("RUN", 0.005f);
@@ -45,22 +46,28 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    
     void Start()
     {
         Camera.main.GetComponent<CameraController>().SetPlayer(gameObject);
     }
 
-    void Update()
+    async void Update()
     {
         if (!Input.anyKey && !_playingJumping)
         {
-            State = PlayerState.Idle;
-            return;
+            if (State != PlayerState.Idle)
+            {
+                State = PlayerState.Idle;
+                PositionState state = new PositionState(Manager.Nakama.PlayerSessionId, transform.position.x, transform.position.y, transform.position.z, transform.rotation.eulerAngles.y);
+                await Manager.Nakama.Socket.SendMatchStateAsync(Manager.Nakama.MatchId, OpCodes.Idle, JsonWriter.ToJson(state));
+                return;
+            }
         }
         KeyboardInput();
     }
 
-    void KeyboardInput()
+    async void KeyboardInput()
     {
         KeyboardMoving();
             
@@ -68,16 +75,8 @@ public class PlayerController : MonoBehaviour
         {
             _playingJumping = true;
             State = PlayerState.Jumping;
-
-            foreach (var presence in Manager.Nakama.Match.Presences)
-            {
-                Debug.Log("Match Presence SessionId : " + presence.SessionId);
-                Debug.Log("Match Presence UserId : " + presence.UserId);
-                Debug.Log("Match Presence Username : " + presence.Username);
-
-                //if (!_players.ContainsKey(presence.SessionId))
-                //    _players.Add(presence.SessionId, _player);
-            }
+            PositionState state = new PositionState(Manager.Nakama.PlayerSessionId, transform.position.x, transform.position.y, transform.position.z, transform.rotation.eulerAngles.y);
+            await Manager.Nakama.Socket.SendMatchStateAsync(Manager.Nakama.MatchId, OpCodes.Jumping, JsonWriter.ToJson(state));
 
         }
     }
@@ -112,16 +111,22 @@ public class PlayerController : MonoBehaviour
     }
 
      async void PlayerMove(Vector3 dir, float moveDistance)
-    {
-        if(!_playingJumping)
+     {
+        float rotate_y = transform.rotation.eulerAngles.y;
+
+        if (!_playingJumping)
+        {
             State = PlayerState.Moving;
+            PositionState moving = new PositionState(Manager.Nakama.PlayerSessionId, transform.position.x, transform.position.y, transform.position.z, rotate_y);
+            await Manager.Nakama.Socket.SendMatchStateAsync(Manager.Nakama.MatchId, OpCodes.Moving, JsonWriter.ToJson(moving));
+        }
+
         transform.position += dir * moveDistance;
         transform.rotation = Quaternion.Slerp(transform.rotation
         , Quaternion.LookRotation(dir), 10 * Time.deltaTime);
-        float rotate_y= transform.rotation.eulerAngles.y;
         PositionState state = new PositionState ( Manager.Nakama.PlayerSessionId,  transform.position.x, transform.position.y, transform.position.z, rotate_y);
         await Manager.Nakama.Socket.SendMatchStateAsync(Manager.Nakama.MatchId, OpCodes.Position, JsonWriter.ToJson(state));
-    }
+     }
 
     public void OnJumpFinish()
     {

@@ -16,21 +16,25 @@ public class NakamaManager
     protected RPC _rpc = new RPC();
     protected string _matchId;
 
+    protected string _playerEmail;
+
     protected GameObject _player;
     protected GameObject _playerPrefab;
     protected GameObject _remotePlayerPrefab;
     protected Nakama.IMatch _match;
 
     protected string _playerSessionId;
-    protected UnityMainThreadDispatcher mainThread;
+    public UnityMainThreadDispatcher _mainThread;
 
     public Action<String, Vector3> SpawnAction = null;
     public string PlayerSessionId { get { return _playerSessionId; } set { _playerSessionId = value; } }
 
+    public Action ChatAction = null;
 
+    public string PlayerEmail { get { return _playerEmail; } set { _playerEmail = value; } }
     public Nakama.IClient Client { get { return _client; } }
     public Nakama.ISession Session { get { return _session; } set { _session = value; } }
-    public Nakama.ISocket Socket { get { return _socket; } }
+    public Nakama.ISocket Socket { get { return _socket; } set { _socket = value; } }
     public string MatchId { get { return _matchId; } set { _matchId = value; } }
     public RPC RPC { get { return _rpc; } }
 
@@ -40,48 +44,88 @@ public class NakamaManager
     public GameObject PlayerPrefab { get { return _playerPrefab; } set { _playerPrefab = value; } }
     public GameObject RemotePlayerPrefab { get { return _remotePlayerPrefab; } set { _remotePlayerPrefab = value; } }
     public Nakama.IMatch Match { get { return _match; } set { _match = value; } }
+
+    //public Nakama.ISession _serverSession;
+    //protected Nakama.ISocket _serverSocket;
+
+
+    //public Nakama.ISession ServerSession { get { return _serverSession; } set { _serverSession = value; } }
+    //public Nakama.ISocket ServerSocket { get { return _serverSocket; } set { _serverSocket = value; } }
     public void Init()
     {
         _client = new Nakama.Client("http", "127.0.0.1", 7350, "defaultkey");
         _client.Timeout = 10;
 
-        _playerPrefab = Resources.Load<GameObject>("Prefabs/unityChan");
-        _remotePlayerPrefab = Resources.Load<GameObject>("Prefabs/remoteUnityChan");
+        PlayerPrefab = Resources.Load<GameObject>("Prefabs/unityChan");
+        RemotePlayerPrefab = Resources.Load<GameObject>("Prefabs/remoteUnityChan");
         SpawnAction += SpawnOther;
+
+
+        if (_mainThread == null)
+        {
+            _mainThread = UnityMainThreadDispatcher.Instance();
+        }
+
+
+        //CreateMatch();
 
     }
 
+    //public async void CreateMatch()
+    //{
+    //    ServerSocket = _client.NewSocket();
+    //    ServerSession = await Client.AuthenticateEmailAsync("server@gmail.com", "password", create: false);
+
+    //    await ServerSocket.ConnectAsync(Session, true, connectTimeout: 10);
+    //    Manager.Nakama.MatchId = await Manager.Nakama.RPC.MatchCreate();
+    //}
+
     public async void ConnectSocket()
     {
-        _socket = _client.NewSocket();
+
         //_socket.ReceivedMatchState += OnMatchStateReceived;
         //_socket.ReceivedMatchPresence += OnMatchPresence;
+        _socket = _client.NewSocket();
+        _socket.ReceivedMatchState += ms => _mainThread.Enqueue(() => OnMatchStateReceived(ms));
+        _socket.ReceivedMatchPresence += mp => _mainThread.Enqueue(() => OnMatchPresence(mp));
 
-        _socket.ReceivedMatchState += ms => mainThread.Enqueue(() => OnMatchStateReceived(ms));
-        _socket.ReceivedMatchPresence += mp => mainThread.Enqueue(() => OnMatchPresence(mp));
+        await _socket.ConnectAsync(Session, true);
 
 
-        await _socket.ConnectAsync(_session, true, connectTimeout: 10);
 
-        if (mainThread == null)
-        {
-            mainThread = UnityMainThreadDispatcher.Instance();
-        }
+  
     }
 
     async private void OnMatchStateReceived(IMatchState matchState)
     {
+
+
         switch (matchState.OpCode)
         {
+
+            case OpCodes.Idle:
+                {
+                    var stateJson = Encoding.UTF8.GetString(matchState.State);
+                    var positionState = JsonParser.FromJson<PositionState>(stateJson);
+                    string SenderSessionId = positionState.SenderSessionId;
+
+                    if (SenderSessionId == _playerSessionId)
+                    {
+                        return;
+                    }
+                    _players[SenderSessionId].GetComponent<RemotePlayerController>().State = RemotePlayerState.Idle;
+                }
+                break;
             case OpCodes.Position:
                 {
                     var stateJson = Encoding.UTF8.GetString(matchState.State);
                     var positionState = JsonParser.FromJson<PositionState>(stateJson);
                     string SenderSessionId = positionState.SenderSessionId;
 
-                    if(SenderSessionId == _playerSessionId)
+                    if (SenderSessionId == _playerSessionId)
                     {
                         return;
+
                     }
                     Debug.LogWarning("Receive Other Player Moving");
 
@@ -89,7 +133,8 @@ public class NakamaManager
                     {
                         Debug.LogWarning($"x : {positionState._X} y : {positionState._Y} z : {positionState._Z} rotate y :{positionState._Rotate_Y}");
                         Debug.LogWarning("Other Player moved");
-                        _players[SenderSessionId].transform.position = new Vector3(positionState._X, positionState._Y, positionState._Z);
+                        //_players[SenderSessionId].transform.position = new Vector3(positionState._X, positionState._Y, positionState._Z);
+                        _players[SenderSessionId].transform.position = Vector3.Lerp(_players[SenderSessionId].transform.position, new Vector3(positionState._X, positionState._Y, positionState._Z), Time.deltaTime * 10);
                         _players[SenderSessionId].transform.rotation = Quaternion.Euler(0, positionState._Rotate_Y, 0);
                     }
 
@@ -117,6 +162,36 @@ public class NakamaManager
                     //}
                 }
                 break;
+
+            case OpCodes.Moving:
+                {
+                    var stateJson = Encoding.UTF8.GetString(matchState.State);
+                    var positionState = JsonParser.FromJson<PositionState>(stateJson);
+                    string SenderSessionId = positionState.SenderSessionId;
+
+                    if (SenderSessionId == _playerSessionId)
+                    {
+                        return;
+                    }
+                    _players[SenderSessionId].GetComponent<RemotePlayerController>().State = RemotePlayerState.Moving;
+
+                }
+                break;
+
+            case OpCodes.Jumping:
+                {
+                    var stateJson = Encoding.UTF8.GetString(matchState.State);
+                    var positionState = JsonParser.FromJson<PositionState>(stateJson);
+                    string SenderSessionId = positionState.SenderSessionId;
+
+                    if (SenderSessionId == _playerSessionId)
+                    {
+                        return;
+                    }
+                    _players[SenderSessionId].GetComponent<RemotePlayerController>().State = RemotePlayerState.Jumping;
+                }
+                break;
+
             case OpCodes.Join:
                 {
 
@@ -165,6 +240,14 @@ public class NakamaManager
                     //}
                 }
                 break;
+
+            case OpCodes.Chat:
+                {
+
+                    if (ChatAction != null)
+                        ChatAction.Invoke();
+                }
+                break;
         }
      }
 
@@ -192,9 +275,16 @@ public class NakamaManager
 
     public async Task JoinMatch(string matchId)
     {
+
+        //ConnectSocket();
+
+
         Match = await _socket.JoinMatchAsync(matchId);
 
+        _playerSessionId = Match.Self.SessionId;
 
+        JoinState state = new JoinState(_playerSessionId, 0, 0, 0);
+        await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, JsonWriter.ToJson(state));
         //_matchId = Match.Id;
         //Debug.Log("Match Id : " + Match.Id);
         //Debug.Log("Match Label : " + Match.Label);
@@ -212,25 +302,27 @@ public class NakamaManager
         //Debug.Log("Match Self : " + Match.Self);
         //Debug.Log("Match Size : " + Match.Size);
 
-        _playerSessionId = Match.Self.SessionId;
         //foreach (KeyValuePair<string, GameObject> player in _players)
         //{
         //    UnityEngine.Object.Instantiate(player.Value);
         //}
 
-        JoinState state = new JoinState(_playerSessionId, 0, 0, 0);
-        await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, JsonWriter.ToJson(state));
+
 
     }
-
-
-
-
 }
+
 public static class OpCodes
 {
     public const long Position = 1;
     public const long Join = 2;
+
+    public const long Idle = 13;
+    public const long Moving = 14;
+    public const long Jumping = 15;
+
+    public const long Chat = 20;
+
 }
 
 

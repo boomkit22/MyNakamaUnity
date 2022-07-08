@@ -13,6 +13,10 @@ public class Login : MonoBehaviour
 
     TMP_InputField _IF_Id;
     TMP_InputField _IF_Password;
+
+    public
+    TMP_InputField _Match_Id;
+
     Button _BT_Login;
 
     void Start()
@@ -30,6 +34,8 @@ public class Login : MonoBehaviour
     {
         string email = _IF_Id.text;
         string password = _IF_Password.text;
+        Manager.Nakama.PlayerEmail = email;
+
 
         try
         {
@@ -43,41 +49,40 @@ public class Login : MonoBehaviour
 
         if (Manager.Nakama.Session != null)
         {
+
+            await Manager.Nakama.RPC.InitializeChat();
+            //var recentChat = await Manager.Nakama.RPC.LoadRecentChat();
+
             Debug.LogWarning("Login Succeed");
+
             SceneManager.LoadScene("Game");
 
-            //Chat Test
-            SendUserChatDto userChatData = new SendUserChatDto();
-            userChatData.Message = "i logined";
-            userChatData.UserName = email;
+            if (_Match_Id.text == "")
+            {
+                Manager.Nakama.MatchId = await Manager.Nakama.RPC.MatchCreate();
+                Debug.Log(Manager.Nakama.MatchId);
+            }
+            else
+            {
+                Debug.Log(_Match_Id.text);
+                Manager.Nakama.MatchId = _Match_Id.text;
+            }
 
-            var res = await Manager.Nakama.RPC.UserChat(userChatData);
-            //Debug.Log(res);
+            await Manager.Nakama.JoinMatch(Manager.Nakama.MatchId);
 
-            var recentChat = await Manager.Nakama.RPC.LoadRecentChat();
-            //Debug.Log(recentChat);
-            //
+            if (Manager.Nakama.PlayerPrefab == null)
+                Debug.LogWarning("Load unitychan failed");
+            Manager.Nakama.Player = Instantiate(Manager.Nakama.PlayerPrefab);
 
-            //Create and Join Match Test
-            //Manager.Nakama.MatchId = await Manager.Nakama.RPC.MatchCreate();
-            Manager.Nakama.MatchId = "c3308923-fdfe-4144-b14a-74af2e3264bb.nakama";
+
+        
             //Debug.Log(matchId);
 
-            try
-            {
-                await Manager.Nakama.JoinMatch(Manager.Nakama.MatchId);
 
-                if (Manager.Nakama.PlayerPrefab == null)
-                    Debug.LogWarning("Load unitychan failed");
 
-                Manager.Nakama.Player = Instantiate(Manager.Nakama.PlayerPrefab);
+        
 
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"Join Match Error  : {ex}");
-            
-            }
+
         }
         else
         {
