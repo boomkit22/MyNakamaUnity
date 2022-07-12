@@ -18,9 +18,29 @@ public class RecentUserChatDto
     public string CreatedTime { get; set; }
 }
 
+public class MatchInfoListDto
+{
+    public List<MatchInfo> MatchInfoList { get ; set;}
+}
+
+public class MatchInfo
+{
+    public string MatchId { get; set; }
+    public int MatchSize { get; set; }
+}
+
 public class RPC
 {
+    public async Task<MatchInfoListDto> GetMatchList()
+    {
+        Debug.Log("Get Match List RPC called");
+        var res = await Manager.Nakama.Client.RpcAsync("defaulthttpkey", "get_match_list");
 
+        MatchInfoListDto matchInfoListDto = JsonConvert.DeserializeObject<MatchInfoListDto>(res.Payload);
+        //return res.Payload;
+
+        return matchInfoListDto;
+    }
     public async Task<string> InitializeChat()
     {
         Debug.Log("Initialize Chat");

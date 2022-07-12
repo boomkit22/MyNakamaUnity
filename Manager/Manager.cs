@@ -34,6 +34,5 @@ public class Manager : MonoBehaviour
             s_Instance = go.GetComponent<Manager>();
             s_Instance._nakama.Init();
         }
-
     }
 }

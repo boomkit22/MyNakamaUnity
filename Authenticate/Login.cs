@@ -19,10 +19,20 @@ public class Login : MonoBehaviour
 
     Button _BT_Login;
 
-    void Start()
+    async void Start()
     {
         _IF_Id = gameObject.transform.Find("IF_Id").GetComponent<TMP_InputField>();
         _IF_Password = gameObject.transform.Find("IF_Password").GetComponent<TMP_InputField>();
+        MatchInfoListDto matchInfoList = await Manager.Nakama.RPC.GetMatchList();
+        if(matchInfoList.MatchInfoList != null)
+        {
+            foreach(var matchInfo in matchInfoList.MatchInfoList)
+            {
+                Debug.Log($"Match Id : {matchInfo.MatchId}" );
+                Debug.Log($"Match Size : {matchInfo.MatchSize}");
+
+            }
+        }
     }
 
     void Update()
@@ -38,6 +48,7 @@ public class Login : MonoBehaviour
         try
         {
             Manager.Nakama.Session = await Manager.Nakama.Client.AuthenticateEmailAsync(email, password, create: false);
+            
             Manager.Nakama.ConnectSocket();
         }
         catch (Exception ex)

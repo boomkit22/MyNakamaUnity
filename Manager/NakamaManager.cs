@@ -1,5 +1,6 @@
 ﻿using Nakama;
 using Nakama.TinyJson;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ public class NakamaManager
     protected Nakama.ISession _session;
     protected Nakama.ISocket _socket;
     protected RPC _rpc = new RPC();
+    //protected RPC _rpc;
     protected string _matchId;
     protected string _playerEmail;
     protected GameObject _player;
@@ -26,6 +28,7 @@ public class NakamaManager
     public string PlayerSessionId { get { return _playerSessionId; } set { _playerSessionId = value; } }
     public Action ChatAction = null;
     public Action<String, Vector3> SpawnAction = null;
+    public Action<IApiNotification> NotiAction = null;
 
     public string PlayerEmail { get { return _playerEmail; } set { _playerEmail = value; } }
     public Nakama.IClient Client { get { return _client; } }
@@ -42,13 +45,13 @@ public class NakamaManager
 
     //public Nakama.ISession _serverSession;
     //protected Nakama.ISocket _serverSocket;
-
-
     //public Nakama.ISession ServerSession { get { return _serverSession; } set { _serverSession = value; } }
     //public Nakama.ISocket ServerSocket { get { return _serverSocket; } set { _serverSocket = value; } }
     public void Init()
     {
         _client = new Nakama.Client("http", "127.0.0.1", 7350, "defaultkey");
+        //_client = new Nakama.Client("http", "34.64.99.190", 6350, "defaultkey");
+
         _client.Timeout = 10;
 
         PlayerPrefab = Resources.Load<GameObject>("Prefabs/unityChan");
@@ -59,6 +62,8 @@ public class NakamaManager
         {
             _mainThread = UnityMainThreadDispatcher.Instance();
         }
+
+        //_rpc = new RPC();
         //CreateMatch();
     }
 
@@ -78,8 +83,35 @@ public class NakamaManager
         _socket = _client.NewSocket();
         _socket.ReceivedMatchState += ms => _mainThread.Enqueue(() => OnMatchStateReceived(ms));
         _socket.ReceivedMatchPresence += mp => _mainThread.Enqueue(() => OnMatchPresence(mp));
+        _socket.ReceivedNotification += nf => _mainThread.Enqueue(() => OnNotiReceived(nf));
         await _socket.ConnectAsync(Session, true);
+
+        //_socket.ReceivedNotification += notification => {
+
+        //    var inGameNoti = JsonConvert.DeserializeObject<InGameNoti>(notification.Subject);
+        //    Debug.Log("content? : " + notification.Content);
+        //    Debug.Log("message : " + inGameNoti.Message);
+        //    //const int rewardCode = 100;
+        //    //switch (notification.Code)
+        //    //{
+        //    //    case rewardCode:
+        //    //        Debug.LogFormat("Congratulations, you won the tournament!\n{0}\n{1}", notification.Subject, notification.Content);
+        //    //        break;
+        //    //    default:
+        //    //        Debug.LogFormat("Other notification: {0}:{1}\n{2}", notification.Code, notification.Subject, notification.Content);
+        //    //        break;
+        //    //}
+        //};
     }
+
+    private void OnNotiReceived(IApiNotification notification)
+    {
+        if(NotiAction != null)
+        {
+            NotiAction.Invoke(notification);
+        }
+    }
+
 
     async private void OnMatchStateReceived(IMatchState matchState)
     {
@@ -184,7 +216,7 @@ public class NakamaManager
                         Vector3 position = new Vector3(joinstate._X, joinstate._Y, joinstate._Z);
                         SpawnAction.Invoke(SenderSessionId, position);
                         JoinState state = new JoinState(_playerSessionId, Player.transform.position);
-                        await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, JsonWriter.ToJson(state));
+                        await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, Nakama.TinyJson.JsonWriter.ToJson(state));
                         //_players.Add(SenderSessionId, _remotePlayerPrefab);
                         //GameObject go = UnityEngine.Object.Instantiate(RemotePlayer);
                         //go.transform.position = new Vector3(joinstate._X, joinstate._Y, joinstate._Z);
@@ -250,11 +282,10 @@ public class NakamaManager
         Match = await _socket.JoinMatchAsync(matchId);
         _playerSessionId = Match.Self.SessionId;
         JoinState state = new JoinState(_playerSessionId, 0, 0, 0);
-        await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, JsonWriter.ToJson(state));
+        await Manager.Nakama.Socket.SendMatchStateAsync(_matchId, OpCodes.Join, Nakama.TinyJson.JsonWriter.ToJson(state));
         //_matchId = Match.Id;
         //Debug.Log("Match Id : " + Match.Id);
         //Debug.Log("Match Label : " + Match.Label);
-
         //foreach (var presence in Match.Presences)
         //{
         //    Debug.Log("Match Presence SessionId : " + presence.SessionId);
@@ -264,7 +295,6 @@ public class NakamaManager
         //    if (!_players.ContainsKey(presence.SessionId))
         //        _players.Add(presence.SessionId, _remotePlayerPrefab);
         //}
-
         //Debug.Log("Match Self : " + Match.Self);
         //Debug.Log("Match Size : " + Match.Size);
 
@@ -330,5 +360,17 @@ public class JoinState
         _X = position.x;
         _Y = position.y;
         _Z = position.z;
+    }
+}
+
+public class InGameNoti
+{
+    string _message;
+
+    public string Message { get { return _message; } set { _message = value; } }
+
+    public InGameNoti(string message)
+    {
+        _message = message;
     }
 }
