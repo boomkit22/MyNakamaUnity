@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class NakamaManager
 {
@@ -302,6 +303,16 @@ public class NakamaManager
         //{
         //    UnityEngine.Object.Instantiate(player.Value);
         //}
+    }
+
+    public async void GameStart()
+    {
+        SceneManager.LoadScene("Game");
+        await Manager.Nakama.RPC.InitializeChat();
+        await Manager.Nakama.JoinMatch(Manager.Nakama.MatchId);
+        if (Manager.Nakama.PlayerPrefab == null)
+            Debug.LogWarning("Load unitychan failed");
+        Manager.Nakama.Player = UnityEngine.Object.Instantiate(Manager.Nakama.PlayerPrefab);
     }
 }
 

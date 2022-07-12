@@ -73,7 +73,7 @@ public class RPC
 
     public async Task<string> MatchCreate()
     {
-        var res = await Manager.Nakama.Client.RpcAsync(Manager.Nakama.Session, "Match_Create");
+        var res = await Manager.Nakama.Client.RpcAsync("defaulthttpkey", "Match_Create");
         Debug.Log("Create Match Succeed");
         return res.Payload;
     }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -19,20 +20,17 @@ public class Login : MonoBehaviour
 
     Button _BT_Login;
 
-    async void Start()
+    GameObject _matchList;
+    GameObject _Panel_Match;
+
+    void Start()
     {
         _IF_Id = gameObject.transform.Find("IF_Id").GetComponent<TMP_InputField>();
         _IF_Password = gameObject.transform.Find("IF_Password").GetComponent<TMP_InputField>();
-        MatchInfoListDto matchInfoList = await Manager.Nakama.RPC.GetMatchList();
-        if(matchInfoList.MatchInfoList != null)
-        {
-            foreach(var matchInfo in matchInfoList.MatchInfoList)
-            {
-                Debug.Log($"Match Id : {matchInfo.MatchId}" );
-                Debug.Log($"Match Size : {matchInfo.MatchSize}");
-
-            }
-        }
+        _Panel_Match = gameObject.transform.Find("Panel_Match").gameObject;
+        _matchList = _Panel_Match.transform.Find("MatchList").gameObject;
+        var matchListController = _matchList.GetComponent<MatchListController>();
+        matchListController.Init();
     }
 
     void Update()
@@ -55,29 +53,27 @@ public class Login : MonoBehaviour
         {
             Debug.Log("Exception Message: " + ex.Message);
         }
+
+
         if (Manager.Nakama.Session != null)
         {
-            SceneManager.LoadScene("Game");
-            await Manager.Nakama.RPC.InitializeChat();
-            //var recentChat = await Manager.Nakama.RPC.LoadRecentChat();
-            Debug.LogWarning("Login Succeed");
 
-            if (_Match_Id.text == "")
-            {
-                Manager.Nakama.MatchId = await Manager.Nakama.RPC.MatchCreate();
-                Debug.Log(Manager.Nakama.MatchId);
-            }
-            else
-            {
-                Debug.Log(_Match_Id.text);
-                Manager.Nakama.MatchId = _Match_Id.text;
-            }
+            _Panel_Match.SetActive(true);
 
-            await Manager.Nakama.JoinMatch(Manager.Nakama.MatchId);
-            if (Manager.Nakama.PlayerPrefab == null)
-                Debug.LogWarning("Load unitychan failed");
-            Manager.Nakama.Player = Instantiate(Manager.Nakama.PlayerPrefab);
-            //Debug.Log(matchId);
+
+
+            //if (_Match_Id.text == "")
+            //{
+            //    Manager.Nakama.MatchId = await Manager.Nakama.RPC.MatchCreate();
+            //    Debug.Log(Manager.Nakama.MatchId);
+            //}
+            //else
+            //{
+            //    Debug.Log(_Match_Id.text);
+            //    Manager.Nakama.MatchId = _Match_Id.text;
+            //}
+
+            //Manager.Nakama.GameStart();
         }
         else
         {
@@ -97,6 +93,30 @@ public class Login : MonoBehaviour
 
         if (go == null)
             Debug.Log("Panel_Register Instantiate Failed");
+    }
+
+    public async void OnCreateMatchButtonClick()
+    {
+        Manager.Nakama.MatchId = await Manager.Nakama.RPC.MatchCreate();
+        Manager.Nakama.GameStart();
+        Debug.Log("Create TAsk finish");
+        //var matchListController = _matchList.GetComponent<MatchListController>();
+        //Debug.Log("Refresh Start");
+        //matchListController.Refresh();
+
+        //Button[] buttonList = _matchList.GetComponentsInChildren<Button>();
+        //foreach (var button in buttonList)
+        //{
+        //    Destroy(button.gameObject);
+        //}
+        //var matchListController = _matchList.GetComponent<MatchListController>();
+        //awaiter.OnCompleted(
+        //    () =>
+        //    {
+        //        matchListController.Refres h();
+        //    });
+
+        //await Manager.Nakama.RPC.MatchCreate();
     }
 
 }
