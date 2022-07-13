@@ -28,6 +28,7 @@ public class NotiController : MonoBehaviour
 
     private void OnNotiReceived(IApiNotification notification)
     {
+        Debug.Log(notification.Subject);
         var inGameNoti = JsonConvert.DeserializeObject<InGameNoti>(notification.Subject);
         _notiText.text = inGameNoti.Message;
     }

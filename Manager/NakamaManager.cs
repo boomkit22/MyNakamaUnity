@@ -50,8 +50,8 @@ public class NakamaManager
     //public Nakama.ISocket ServerSocket { get { return _serverSocket; } set { _serverSocket = value; } }
     public void Init()
     {
-        _client = new Nakama.Client("http", "127.0.0.1", 7350, "defaultkey");
-        //_client = new Nakama.Client("http", "34.64.99.190", 6350, "defaultkey");
+        //_client = new Nakama.Client("http", "127.0.0.1", 7350, "defaultkey");
+        _client = new Nakama.Client("http", "34.64.99.190", 6350, "defaultkey");
 
         _client.Timeout = 10;
 
@@ -376,12 +376,5 @@ public class JoinState
 
 public class InGameNoti
 {
-    string _message;
-
-    public string Message { get { return _message; } set { _message = value; } }
-
-    public InGameNoti(string message)
-    {
-        _message = message;
-    }
+    public String Message { get; set; }
 }
