@@ -44,16 +44,19 @@ public class NakamaManager
     public GameObject RemotePlayerPrefab { get { return _remotePlayerPrefab; } set { _remotePlayerPrefab = value; } }
     public Nakama.IMatch Match { get { return _match; } set { _match = value; } }
 
+    public string Host { get; set; }
+    public int Port { get; set; }
+
     //public Nakama.ISession _serverSession;
     //protected Nakama.ISocket _serverSocket;
     //public Nakama.ISession ServerSession { get { return _serverSession; } set { _serverSession = value; } }
     //public Nakama.ISocket ServerSocket { get { return _serverSocket; } set { _serverSocket = value; } }
     public void Init()
     {
-        //_client = new Nakama.Client("http", "127.0.0.1", 7350, "defaultkey");
-        _client = new Nakama.Client("http", "34.64.99.190", 6350, "defaultkey");
 
-        _client.Timeout = 10;
+        //_client = new Nakama.Client("http", "127.0.0.1", 7350, "defaultkey");
+        //_client = new Nakama.Client("http", "34.64.99.190", 6350, "defaultkey");
+        
 
         PlayerPrefab = Resources.Load<GameObject>("Prefabs/unityChan");
         RemotePlayerPrefab = Resources.Load<GameObject>("Prefabs/remoteUnityChan");
@@ -66,6 +69,12 @@ public class NakamaManager
 
         //_rpc = new RPC();
         //CreateMatch();
+    }
+
+    public void InitClient()
+    {
+        _client = new Nakama.Client("http", Host, Port, "defaultkey");
+        _client.Timeout = 10;
     }
 
     //public async void CreateMatch()
