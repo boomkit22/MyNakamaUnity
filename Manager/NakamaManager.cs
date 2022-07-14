@@ -374,7 +374,3 @@ public class JoinState
     }
 }
 
-public class InGameNoti
-{
-    public String Message { get; set; }
-}
